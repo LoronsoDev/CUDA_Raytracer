@@ -1,9 +1,14 @@
 #pragma once
-#include <glm/glm.hpp>
 #include <iostream>
 
+#include <glm/glm.hpp>
+#include <glm/gtx/norm.hpp>
+
+#include <raytracer/Ray.h>
+
 using namespace glm;
-using Color = vec3;
+using Color = fvec3;
+using Point3D = dvec3;
 
 namespace utils
 {

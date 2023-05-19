@@ -1,11 +1,12 @@
 #pragma once
 #include <raytracer/Common.h>
+using namespace glm;
 
 class Ray
 {
 public:
 	dvec3 orig;
-	dvec3 dir = {0.0, 0.0, 0.0};
+	dvec3 dir;
 
 public:
 	Ray(const vec3& origin, const vec3& direction)
@@ -13,10 +14,10 @@ public:
 	{
 	}
 
-	vec3 origin() const { return orig; }
-	vec3 direction() const { return dir; }
+	dvec3 origin() const { return orig; }
+	dvec3 direction() const { return dir; }
 
-	vec3 at(double t) const
+	dvec3 at(double t) const
 	{
 		return orig + t * dir;
 	}
