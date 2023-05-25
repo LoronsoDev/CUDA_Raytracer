@@ -130,11 +130,16 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\raytracer\objects\Sphere.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\raytracer\Camera.h" />
     <ClInclude Include="src\raytracer\Common.h" />
+    <ClInclude Include="src\raytracer\Hittable_List.h" />
+    <ClInclude Include="src\raytracer\materials\Material.h" />
+    <ClInclude Include="src\raytracer\objects\Hittable.h" />
+    <ClInclude Include="src\raytracer\objects\Sphere.h" />
     <ClInclude Include="src\raytracer\Ray.h" />
-    <ClInclude Include="src\raytracer\utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
