@@ -79,10 +79,25 @@ inline dvec3 random_in_unit_sphere() {
     }
 }
 
+static dvec3 random_in_unit_disk() {
+    while (true) {
+        auto p = dvec3(random_double(-1, 1), random_double(-1, 1), 0);
+        if (length2(p) >= 1) continue;
+        return p;
+    }
+}
+
 inline bool near_zero_vector(dvec3 vector)
 {
     const auto epsilon = 1e-8;
     return (fabs(vector.x) < epsilon) && (fabs(vector.y) < epsilon) && (fabs(vector.z) < epsilon);
+}
+
+inline dvec3 refract_vector(const dvec3& uv, const dvec3& n, double etai_over_etat) {
+    auto cos_theta = fmin(dot(-uv, n), 1.0);
+    dvec3 r_out_perp = etai_over_etat * (uv + cos_theta * n);
+    dvec3 r_out_parallel = -sqrt(fabs(1.0 - length2(r_out_perp))) * n;
+    return r_out_perp + r_out_parallel;
 }
 
 inline dvec3 random_in_hemisphere(const dvec3& normal) {

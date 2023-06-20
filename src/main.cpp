@@ -50,19 +50,26 @@ int main() {
 
     // World
     hittable_list world;
+    auto radius = cos(pi<double>() / 4);
+
     auto material_ground = make_shared<Lambertian>(Color(0.8, 0.8, 0.0));
-    auto material_center = make_shared<Lambertian>(Color(0.7, 0.3, 0.3));
-    auto material_left = make_shared<Metal>(Color(0.8, 0.8, 0.8), 0.3);
+    auto material_center = make_shared<Lambertian>(Color(0.1, 0.2, 0.5));
+    auto material_left = make_shared<Dielectric>(1.5);
     auto material_right = make_shared<Metal>(Color(0.8, 0.6, 0.2), 0.8);
 
     world.add(make_shared<Sphere>(Point3D(0.0, -100.5, -1.0), 100.0, material_ground));
     world.add(make_shared<Sphere>(Point3D(0.0, 0.0, -1.0), 0.5, material_center));
-    world.add(make_shared<Sphere>(Point3D(-1.0, 0.0, -1.0), 0.5, material_left));
-    world.add(make_shared<Sphere>(Point3D(1.0, 0.0, -1.0), 0.5, material_right));
-
+    world.add(make_shared<Sphere>(Point3D(-radius, 0.0, -1.0), radius, material_left));
+    world.add(make_shared<Sphere>(Point3D(radius, 0.0, -1.0), radius, material_right));
 
     // Camera
-    Camera cam;
+    Point3D lookfrom(3, 3, 2);
+    Point3D lookat(0, 0, -1);
+    dvec3 vup(0, 1.0, 0);
+    double dist_to_focus = length((lookfrom - lookat));
+    double aperture = 2.0;
+
+    Camera cam(lookfrom, lookat, vup, 20, aspect_ratio, aperture, dist_to_focus);
 
     // Render
 
