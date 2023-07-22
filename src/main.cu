@@ -10,6 +10,8 @@
 #include <raytracer/materials/Material.h>
 
 #include <sdl/include/SDL.h>
+
+#include <chrono>
 #undef main
 
 __device__ Color raytrace(const Ray r, const hittable_list** d_world, int max_depth, curandState* rand_state) {
@@ -133,6 +135,21 @@ __global__ void initCurand(curandState* state, unsigned long seed, unsigned w, u
 	curand_init(seed, index, 0, &state[index]);
 }
 
+__global__ void free_gpu_resources(hittable_list** world, Hittable** obj_list, int size)
+{
+	//Freeing resources allocated on global memory
+	for(int i = 0; i < size; ++i)
+	{
+		Sphere* sphere = (Sphere*)obj_list[i];
+		delete(sphere->material_ptr);
+		delete obj_list[i];
+	}
+	delete *world;
+
+	printf("Freed GPU resources!");
+}
+
+
 int main() {
 	// Inicializar SDL
 	SDL_Init(SDL_INIT_VIDEO);
@@ -140,67 +157,76 @@ int main() {
 	// Crear la ventana
 	SDL_Window* window = SDL_CreateWindow("CUDA Raytracer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, image_width, image_height, SDL_WINDOW_SHOWN);
 	// Crear el renderizador
-	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
+	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+
+	// World
+
+	Hittable** d_instance_holder;
+	hittable_list** d_world;
+	checkCudaErrors(cudaMalloc((void**)&d_instance_holder, world_size * sizeof(Hittable)));
+	checkCudaErrors(cudaMalloc((void**)&d_world, sizeof(hittable_list)));
+
+	cudaDeviceProp props;
+	cudaGetDeviceProperties(&props, 0);
+
+	//auto threads_per_block = sqrt(512);
+	dim3 blockSize(16, 16);              // Tamaño del bloque
+	dim3 gridSize(
+		ceil((image_width + blockSize.x - 1) / (float)blockSize.x),
+		ceil((image_height + blockSize.y - 1) / (float)blockSize.y));                  // Tamaño de la cuadrícula
 
 	bool quit = false;
 	SDL_Event event;
-	while (!quit) {
-		SDL_PollEvent(&event);
+	create_world << < 1, 1 >> > (d_world, d_instance_holder, world_size); //We only want to call this once
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+	assert(cudaGetLastError() == 0); //assert there's no errors
 
+	// Camera
+	Point3D lookfrom(3, 3, 2);
+	Point3D lookat(0, 0, -1);
+	dvec3 vup(0, 1.0, 0);
+	double dist_to_focus = length((lookfrom - lookat));
+	double aperture = 0.0; //blur
+
+	Camera* cam = new Camera(lookfrom, lookat, vup, 20, aspect_ratio, aperture, dist_to_focus);
+	Camera* d_cam;
+
+	cudaMalloc((void**)&d_cam, sizeof(Camera));
+	checkCudaErrors(cudaMemcpy(d_cam, cam, sizeof(Camera), cudaMemcpyHostToDevice));
+
+	//// Render
+
+	std::cout << "P3\n" << image_width << " " << image_height << "\n255\n";
+
+	Color* h_pixel_colors = new Color[image_width * image_height];
+	std::fill(h_pixel_colors, h_pixel_colors + image_width * image_height, Color(1, 0, 0.5));
+
+	Color* d_pixel_colors;
+
+	checkCudaErrors(cudaMalloc((void**)&d_pixel_colors, image_width * image_height * sizeof(Color)));
+
+	curandState* devState;
+	checkCudaErrors(cudaMalloc((void**)&devState, 8192 * 16 * sizeof(curandState)));
+	initCurand << < gridSize, blockSize >> > (devState, 7355608, image_width, image_height);
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+
+
+	SDL_Surface* surface = SDL_CreateRGBSurface(0, image_width, image_height, 32, 0, 0, 0, 0);
+
+	while (!quit) {
+		auto start = std::chrono::high_resolution_clock::now();
+
+		SDL_Event event;
+		while (SDL_PollEvent(&event) != 0) {
+			if (event.type == SDL_QUIT) {
+				quit = true;
+			}
+		}
+		
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255.);
 		SDL_RenderClear(renderer);
-
-		// World
-
-		Hittable** d_instance_holder;
-		hittable_list** d_world;
-		checkCudaErrors(cudaMalloc((void**)&d_instance_holder, world_size * sizeof(Hittable)));
-		checkCudaErrors(cudaMalloc((void**)&d_world, sizeof(hittable_list)));
-
-		cudaDeviceProp props;
-		cudaGetDeviceProperties(&props, 0);
-
-		//auto threads_per_block = sqrt(512);
-		dim3 blockSize(16, 16);              // Tamaño del bloque
-		dim3 gridSize(
-			ceil((image_width + blockSize.x - 1) / (float)blockSize.x),
-			ceil((image_height + blockSize.y - 1) / (float)blockSize.y));                  // Tamaño de la cuadrícula
-
-		create_world << < 1, 1 >> > (d_world, d_instance_holder, world_size); //We only want to call this once
-		checkCudaErrors(cudaGetLastError());
-		checkCudaErrors(cudaDeviceSynchronize());
-		assert(cudaGetLastError() == 0); //assert there's no errors
-
-		// Camera
-		Point3D lookfrom(3, 3, 2);
-		Point3D lookat(0, 0, -1);
-		dvec3 vup(0, 1.0, 0);
-		double dist_to_focus = length((lookfrom - lookat));
-		double aperture = 0.0; //blur
-
-		Camera* cam = new Camera(lookfrom, lookat, vup, 20, aspect_ratio, aperture, dist_to_focus);
-		Camera* d_cam;
-
-		cudaMalloc((void**)&d_cam, sizeof(Camera));
-		checkCudaErrors(cudaMemcpy(d_cam, cam, sizeof(Camera), cudaMemcpyHostToDevice));
-
-		//// Render
-
-		std::cout << "P3\n" << image_width << " " << image_height << "\n255\n";
-
-		Color* h_pixel_colors = new Color[image_width * image_height];
-		std::fill(h_pixel_colors, h_pixel_colors + image_width * image_height, Color(1, 0, 0.5));
-
-		Color* d_pixel_colors;
-
-		checkCudaErrors(cudaMalloc((void**)&d_pixel_colors, image_width * image_height * sizeof(Color)));
-		checkCudaErrors(cudaMemcpy(d_pixel_colors, h_pixel_colors, image_width * image_height * sizeof(Color), cudaMemcpyHostToDevice)); //Not needed but useful for debugging.
-
-		curandState* devState;
-		checkCudaErrors(cudaMalloc((void**)&devState, 8192 * 16 * sizeof(curandState)));
-		initCurand << < gridSize, blockSize >> > (devState, 7355608, image_width, image_height);
-		checkCudaErrors(cudaGetLastError());
-		checkCudaErrors(cudaDeviceSynchronize());
 
 		raytraceKernel << < gridSize, blockSize >> > (image_width, image_height, samples_per_pixel, d_world, d_cam, d_pixel_colors, devState);
 		checkCudaErrors(cudaGetLastError());
@@ -210,23 +236,30 @@ int main() {
 
 		checkCudaErrors(cudaMemcpy(h_pixel_colors, d_pixel_colors, image_width * image_height * sizeof(Color), cudaMemcpyDeviceToHost));
 
-		for (int j = image_height - 1; j >= 0; --j) {
-			for (int i = 0; i < image_width; ++i) {
-				Color pixel_color = h_pixel_colors[j * image_width + i];
-				// Pinta el píxel en la ventana
-				SDL_SetRenderDrawColor(renderer, pixel_color.r * 255, pixel_color.g * 255, pixel_color.b * 255, 255);
-				SDL_RenderDrawPoint(renderer, i, j);
-				// Presenta el renderizador en la ventana
-				SDL_RenderPresent(renderer);
+		for (int y = 0; y < image_height; ++y) {
+			for (int x = 0; x < image_width; ++x) {
+				Color pixel_color = h_pixel_colors[y * image_width + x];
+				//Uint32 color = SDL_MapRGB(surface->format, pixel_color.r * 255, pixel_color.g * 255, pixel_color.b * 255);
+				Uint32 color = SDL_MapRGB(surface->format, pixel_color.r *255, pixel_color.g * 255, pixel_color.b * 255);
+				*((Uint32*)surface->pixels + y * image_width + x) = color;
 			}
 		}
-
-		std::cerr << "\nDone.\n";
+		SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+		SDL_RenderClear(renderer);
+		SDL_RenderCopy(renderer, texture, NULL, NULL);
+		SDL_RenderPresent(renderer);
+		SDL_DestroyTexture(texture);
+		auto end = std::chrono::high_resolution_clock::now();
+		std::chrono::duration<double> duration = end - start;
+		double elapsed_seconds = duration.count();
+		std::cout << "\n Rendered in " << elapsed_seconds << "seconds.\n" << std::endl;
 
 		if (event.type == SDL_QUIT) {
 			quit = true;
 		}
 	}
+
+	free_gpu_resources << < 1, 1 >> > (d_world, d_instance_holder, world_size);
 
 	// Liberar recursos y cerrar SDL
 	SDL_DestroyWindow(window);
