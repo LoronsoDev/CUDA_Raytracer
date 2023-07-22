@@ -1,9 +1,10 @@
 #pragma once
 
-#include <raytracer/Common.h>
+#include <raytracer/Common.cuh>
+
 
 class Camera {
-private:
+public:
     Point3D origin;
     Point3D lower_left_corner;
     dvec3 horizontal;
@@ -13,7 +14,7 @@ private:
 
 
 public:
-    Camera(Point3D lookfrom,
+    __device__ __host__ Camera(Point3D lookfrom,
         Point3D lookat,
         dvec3   vup,
         double vfov, // vertical field-of-view in degrees
@@ -38,9 +39,10 @@ public:
         lens_radius = aperture / 2.0;
     }
 
-    Ray get_ray(double s, double t) const {
-        dvec3 rd = lens_radius * random_in_unit_disk();
-        dvec3 offset = (u * rd.x) + v * rd.y;
+    __device__ Ray get_ray(double s, double t, curandState* randState) const {
+        dvec3 rd = random_in_unit_disk(randState);
+        dvec3 res = lens_radius * rd;
+        dvec3 offset = (u * res.x) + v * res.y;
 
         return Ray(
             origin + offset,

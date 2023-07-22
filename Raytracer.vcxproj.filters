@@ -15,21 +15,16 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\raytracer\objects\Sphere.cpp">
-      <Filter>Archivos de origen</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="src\raytracer\Common.h">
+    <ClInclude Include="src\raytracer\Common.cuh">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="src\raytracer\Ray.h">
+    <ClInclude Include="src\raytracer\Ray.cuh">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="src\raytracer\objects\Hittable.h">
+    <ClInclude Include="src\raytracer\objects\Hittable.cuh">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="src\raytracer\objects\Sphere.h">
+    <ClInclude Include="src\raytracer\objects\Sphere.cuh">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
     <ClInclude Include="src\raytracer\Hittable_List.h">
@@ -46,7 +41,5 @@
     <CudaCompile Include="src\main.cu">
       <Filter>Archivos de origen</Filter>
     </CudaCompile>
-    <CudaCompile Include="src\Raytracing.cu" />
-    <CudaCompile Include="src\Raytracing.cuh" />
   </ItemGroup>
 </Project>

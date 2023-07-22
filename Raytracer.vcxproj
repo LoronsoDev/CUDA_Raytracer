@@ -113,6 +113,9 @@
       <AdditionalLibraryDirectories>libs/sdl/lib;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1\lib\x64</AdditionalLibraryDirectories>
       <AdditionalDependencies>cudart.lib;SDL2.lib;SDL2main.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <CudaCompile>
+      <Include>src;libs/glm;</Include>
+    </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -132,27 +135,23 @@
       <AdditionalLibraryDirectories>libs/sdl/lib;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1\lib\x64</AdditionalLibraryDirectories>
       <AdditionalDependencies>cudart.lib;SDL2.lib;SDL2main.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <CudaCompile>
+      <Include>src;libs/glm;</Include>
+    </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <CudaCompile Include="src\main.cu">
       <FileType>Document</FileType>
     </CudaCompile>
-    <ClCompile Include="src\raytracer\objects\Sphere.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\raytracer\Camera.h" />
-    <ClInclude Include="src\raytracer\Common.h" />
+    <ClInclude Include="src\raytracer\Common.cuh" />
     <ClInclude Include="src\raytracer\Hittable_List.h" />
     <ClInclude Include="src\raytracer\materials\Material.h" />
-    <ClInclude Include="src\raytracer\objects\Hittable.h" />
-    <ClInclude Include="src\raytracer\objects\Sphere.h" />
-    <ClInclude Include="src\raytracer\Ray.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <CudaCompile Include="src\Raytracing.cu">
-      <FileType>Document</FileType>
-    </CudaCompile>
-    <CudaCompile Include="src\Raytracing.cuh" />
+    <ClInclude Include="src\raytracer\objects\Hittable.cuh" />
+    <ClInclude Include="src\raytracer\objects\Sphere.cuh" />
+    <ClInclude Include="src\raytracer\Ray.cuh" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
